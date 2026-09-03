@@ -146,7 +146,13 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.18;ba
 <section class="section"><h2>Sản phẩm</h2><div id="products" class="grid"></div></section>
 <section id="account" class="section hidden"><div class="card"><h2>Tài khoản</h2><div id="accountInfo"></div><div class="row"><button class="btn" onclick="deposit()">Nạp tiền</button><button class="btn" onclick="seller()">Đăng ký Seller</button><button class="btn" onclick="historyView()">Lịch sử</button><button class="btn" onclick="logout()">Đăng xuất</button></div></div><div id="history" class="section"></div></section>
 <section id="ranking" class="section"><div class="card"><h2>Top nạp tiền tháng này</h2><div id="rankings"></div></div></section>
-<section id="admin" class="section hidden"><div class="card"><h2>ADMIN PANEL</h2><div id="adminStats"></div><hr style="border-color:#222"><h3>Thêm sản phẩm</h3><input id="pname" placeholder="Tên sản phẩm"><input id="pprice" type="number" placeholder="Giá"><textarea id="pdesc" placeholder="Mô tả"></textarea><button class="btn primary" onclick="addProduct()">Thêm sản phẩm</button><div id="adminProducts" class="section"></div><div id="adminDeposits" class="section"></div><div id="adminUsers" class="section"></div></div></section>
+<section id="admin" class="section hidden"><div class="card"><h2>ADMIN PANEL</h2><div id="adminStats"></div><hr style="border-color:#222"><h3>Thêm sản phẩm</h3><input id="pname" placeholder="Tên sản phẩm"><input id="pprice" type="number" placeholder="Giá"><textarea id="pdesc" placeholder="Mô tả"></textarea><button class="btn primary" onclick="addProduct()">Thêm sản phẩm</button><div id="adminProducts" class="section"></div><div id="adminDeposits" class="section"></div>
+<div id="adminCardTopups" class="section">
+  <h3>💳 Đơn nạp thẻ chờ duyệt</h3>
+  <div id="cardTopupAdminList" class="list"></div>
+</div>
+
+<div id="adminUsers" class="section"></div></div></section>
 
 <section id="cardTopup" class="card" style="margin-top:18px">
   <div class="row" style="justify-content:space-between;align-items:center">
@@ -180,6 +186,128 @@ async function seller(){try{await api('/api/apply-seller',{method:'POST',body:'{
 async function historyView(){if(!meData)return;const [d,p]=await Promise.all([api('/api/history/deposits'),api('/api/history/purchases')]);$('history').innerHTML='<div class="card"><h3>Nạp tiền</h3><table><tr><th>Thời gian</th><th>Số tiền</th><th>Trạng thái</th></tr>'+d.map(x=>`<tr><td>${fmt(x.createdAt)}</td><td>${money(x.amount)}</td><td>${esc(x.status)}</td></tr>`).join('')+'</table><h3>Mua hàng</h3>'+p.map(x=>`<div class="card" style="margin:8px 0"><b>${esc(x.productName)}</b> • ${money(x.price)}<div class="key">${esc(x.key)}</div><small class="muted">${fmt(x.createdAt)}</small></div>`).join('')+'</div>'}
 async function loadRank(){const d=await api('/api/topup-ranking');$('rankings').innerHTML=d.rows.length?d.rows.map((x,i)=>`<p>#${i+1} <b>${esc(x.username)}</b> — ${money(x.amount)}</p>`).join(''):'<p class="muted">Chưa có dữ liệu tháng này.</p>';if(meData){const i=d.rows.findIndex(x=>x.username===meData.username);$('statRank').textContent=i>=0?'#'+(i+1):'—'}}
 async function logout(){await api('/api/logout',{method:'POST'});meData=null;await refresh()}
+
+async function loadAdminCardTopups(){
+  const box = document.getElementById("cardTopupAdminList");
+  if(!box) return;
+
+  try {
+    const r = await fetch("/api/admin/card-topups", {
+      credentials: "include"
+    });
+
+    const data = await r.json();
+
+    if(!r.ok)
+      throw new Error(data.error || "Không tải được đơn thẻ");
+
+    const items = data.items || [];
+
+    if(!items.length){
+      box.innerHTML =
+        '<p class="muted">Chưa có đơn nạp thẻ.</p>';
+      return;
+    }
+
+    box.innerHTML = items.map(card => {
+      const status =
+        card.status === "pending" ? "⏳ Chờ duyệt" :
+        card.status === "approved" ? "✅ Đã duyệt" :
+        "❌ Đã từ chối";
+
+      const buttons = card.status === "pending" ? `
+        <div class="row" style="gap:8px;margin-top:12px">
+          <button class="btn primary"
+            onclick="approveCardTopup('${card.id}')">
+            ✅ Duyệt + Cộng tiền
+          </button>
+
+          <button class="btn danger"
+            onclick="rejectCardTopup('${card.id}')">
+            ❌ Từ chối
+          </button>
+        </div>
+      ` : "";
+
+      return `
+        <div class="card" style="margin:10px 0;padding:15px">
+          <b>👤 User:</b> ${escapeHtml(card.username || "")}<br>
+          <b>📱 Nhà mạng:</b> ${escapeHtml(card.telco || "")}<br>
+          <b>💰 Mệnh giá:</b> ${Number(card.amount || 0).toLocaleString("vi-VN")}₫<br>
+          <b>🔢 Số SERI:</b>
+          <code>${escapeHtml(card.serial || "")}</code><br>
+          <b>🔐 Mã thẻ:</b>
+          <code>${escapeHtml(card.code || "")}</code><br>
+          <b>📌 Trạng thái:</b> ${status}
+          ${buttons}
+        </div>
+      `;
+    }).join("");
+
+  } catch(e) {
+    box.innerHTML =
+      '<p style="color:#ff5555">❌ ' +
+      escapeHtml(e.message) +
+      '</p>';
+  }
+}
+
+async function approveCardTopup(id){
+  if(!confirm("Xác nhận thẻ hợp lệ và cộng tiền cho user?"))
+    return;
+
+  try {
+    const r = await fetch("/api/admin/card-topups/" + id + "/approve", {
+      method: "POST",
+      credentials: "include"
+    });
+
+    const data = await r.json();
+
+    if(!r.ok)
+      throw new Error(data.error || "Duyệt thẻ thất bại");
+
+    alert("✅ Đã duyệt thẻ và cộng tiền cho user.");
+    await loadAdminCardTopups();
+    if(typeof loadAdmin === "function") await loadAdmin();
+
+  } catch(e) {
+    alert("❌ " + e.message);
+  }
+}
+
+async function rejectCardTopup(id){
+  if(!confirm("Xác nhận từ chối đơn thẻ này?"))
+    return;
+
+  try {
+    const r = await fetch("/api/admin/card-topups/" + id + "/reject", {
+      method: "POST",
+      credentials: "include"
+    });
+
+    const data = await r.json();
+
+    if(!r.ok)
+      throw new Error(data.error || "Từ chối thất bại");
+
+    alert("❌ Đã từ chối đơn thẻ.");
+    await loadAdminCardTopups();
+
+  } catch(e) {
+    alert("❌ " + e.message);
+  }
+}
+
+function escapeHtml(v){
+  return String(v ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
 async function loadAdmin(){try{const [s,ps,ds,us]=await Promise.all([api('/api/admin/stats'),api('/api/admin/products'),api('/api/admin/deposits'),api('/api/admin/users')]);$('admin').classList.remove('hidden');$('adminStats').innerHTML=`<p>Users: <b>${s.users}</b> • Orders: <b>${s.orders}</b> • Revenue: <b>${money(s.revenue)}</b> • KEY còn: <b>${s.keys}</b></p>`;$('adminProducts').innerHTML='<h3>Kho sản phẩm & KEY</h3>'+ps.map(p=>`<div class="card" style="margin:8px 0"><b>${esc(p.name)}</b> — ${money(p.price)}<p class="muted">${(p.keys||[]).filter(k=>!k.sold).length} KEY còn</p><textarea id="keys-${p.id}" placeholder="Mỗi KEY một dòng"></textarea><div class="row"><button class="btn primary" onclick="addKeys('${p.id}')">+ Thêm KEY</button><button class="btn danger" onclick="delProduct('${p.id}')">Xóa sản phẩm</button></div></div>`).join('');$('adminDeposits').innerHTML='<h3>Nạp tiền chờ duyệt</h3>'+ds.filter(x=>x.status==='pending').map(x=>`<div class="card" style="margin:8px 0">${esc(x.username)} — ${money(x.amount)} — ${esc(x.content)} <div class="row"><button class="btn primary" onclick="dep('${x.id}','approved')">Duyệt</button><button class="btn danger" onclick="dep('${x.id}','rejected')">Từ chối</button></div></div>`).join('')||'<p class="muted">Không có giao dịch chờ.</p>';$('adminUsers').innerHTML='<h3>User</h3>'+us.map(x=>`<div style="padding:8px 0;border-bottom:1px solid #222">${esc(x.username)} — ${esc(x.role)} — ${money(x.balance)} ${x.sellerRequested?'<span class="pill">Seller chờ duyệt</span>':''} ${x.role!=='admin'?(x.sellerRequested?`<button class="btn" onclick="approveSeller('${x.username}')">Duyệt Seller</button>`:'')+`<button class="btn" onclick="ban('${x.username}',${!x.banned})">${x.banned?'Mở ban':'Ban'}</button>`:''}</div>`).join('') }catch(e){console.error(e)}}
 async function addProduct(){try{await api('/api/admin/products',{method:'POST',body:JSON.stringify({name:$('pname').value,price:Number($('pprice').value),description:$('pdesc').value})});$('pname').value='';$('pprice').value='';$('pdesc').value='';await refresh()}catch(e){alert(e.message)}}
 async function addKeys(id){const a=$('keys-'+id).value.split('\\n').map(x=>x.trim()).filter(Boolean);try{await api('/api/admin/products/'+id+'/keys',{method:'POST',body:JSON.stringify({keys:a})});alert('Đã thêm KEY');await refresh()}catch(e){alert(e.message)}}
