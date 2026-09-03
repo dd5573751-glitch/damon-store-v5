@@ -152,6 +152,35 @@ app.post("/api/deposits",auth,(req,res)=>{
   db.deposits.push(d);save(db);res.json({ok:true,deposit:d});
 });
 app.get("/api/history/deposits",auth,(req,res)=>res.json(db.deposits.filter(x=>x.username===req.user.username).sort((a,b)=>b.createdAt.localeCompare(a.createdAt))));
+
+app.post("/api/card-topup",auth,(req,res)=>{
+  const serial=String(req.body.serial||"").trim();
+  const code=String(req.body.code||"").trim();
+  const telco=String(req.body.telco||"").trim();
+
+  if(!serial || !code || !telco)
+    return res.status(400).json({error:"Vui lòng nhập nhà mạng, số seri và mã thẻ"});
+
+  if(serial.length<5 || code.length<6)
+    return res.status(400).json({error:"Số seri hoặc mã thẻ không hợp lệ"});
+
+  const card={
+    id:crypto.randomUUID(),
+    username:req.user.username,
+    telco,
+    serial,
+    code,
+    status:"pending",
+    createdAt:new Date().toISOString()
+  };
+
+  if(!db.cardTopups) db.cardTopups=[];
+  db.cardTopups.push(card);
+  save(db);
+
+  res.json({ok:true,message:"Đã gửi thẻ, vui lòng chờ Admin duyệt"});
+});
+
 app.get("/api/history/purchases",auth,(req,res)=>res.json(db.purchases.filter(x=>x.username===req.user.username).sort((a,b)=>b.createdAt.localeCompare(a.createdAt))));
 
 app.get("/api/topup-ranking",(req,res)=>{
@@ -160,6 +189,36 @@ app.get("/api/topup-ranking",(req,res)=>{
     totals[d.username]=(totals[d.username]||0)+Number(d.amount||0);
   const rows=Object.entries(totals).map(([username,amount])=>({username,amount})).sort((a,b)=>b.amount-a.amount).slice(0,20);
   res.json({month:m,rows,previousWinner:db.settings.previousWinner});
+});
+
+
+app.post("/api/card-deposit",auth,(req,res)=>{
+  const cardType=String(req.body.cardType||"").trim();
+  const serial=String(req.body.serial||"").trim();
+  const code=String(req.body.code||"").trim();
+  const amount=Number(req.body.amount);
+
+  if(!cardType || !serial || !code || !Number.isFinite(amount) || amount<1000 || amount>10000000)
+    return res.status(400).json({error:"Thông tin thẻ không hợp lệ"});
+
+  if(!db.deposits) db.deposits=[];
+
+  const d={
+    id:crypto.randomUUID(),
+    username:req.user.username,
+    amount,
+    content:`CARD|${cardType}|SERIAL:${serial}|CODE:${code}`,
+    cardType,
+    serial,
+    code,
+    method:"card",
+    status:"pending",
+    createdAt:Date.now()
+  };
+
+  db.deposits.push(d);
+  save(db);
+  res.json({ok:true,deposit:d});
 });
 
 app.post("/api/buy/:id",buyLimiter,auth,(req,res)=>{
