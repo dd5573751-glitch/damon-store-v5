@@ -296,4 +296,84 @@ app.get("/api/admin/stats",adminLimiter,admin,(req,res)=>res.json({
 app.use(express.static(path.join(__dirname,"public")));
 app.get("/{*splat}",(req,res)=>res.sendFile(path.join(__dirname,"public","index.html")));
 
+
+// ================= CARD TOPUP ADMIN =================
+
+app.get("/api/admin/card-topups", auth, (req, res) => {
+  if (!req.user || req.user.role !== "admin")
+    return res.status(403).json({error:"Admin only"});
+
+  if (!db.cardTopups) db.cardTopups = [];
+
+  // Chỉ Admin mới nhận được serial + code
+  res.json({
+    ok: true,
+    items: db.cardTopups
+      .slice()
+      .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
+  });
+});
+
+app.post("/api/admin/card-topups/:id/approve", auth, (req, res) => {
+  if (!req.user || req.user.role !== "admin")
+    return res.status(403).json({error:"Admin only"});
+
+  if (!db.cardTopups) db.cardTopups = [];
+
+  const card = db.cardTopups.find(x => x.id === req.params.id);
+
+  if (!card)
+    return res.status(404).json({error:"Không tìm thấy đơn thẻ"});
+
+  if (card.status !== "pending")
+    return res.status(400).json({error:"Đơn này đã được xử lý"});
+
+  const user = db.users?.find
+    ? db.users.find(u => u.username === card.username)
+    : null;
+
+  if (!user)
+    return res.status(404).json({error:"Không tìm thấy user"});
+
+  user.balance = Number(user.balance || 0) + Number(card.amount || 0);
+
+  card.status = "approved";
+  card.approvedAt = new Date().toISOString();
+  card.approvedBy = req.user.username;
+
+  save(db);
+
+  res.json({
+    ok:true,
+    message:"Đã duyệt thẻ và cộng tiền cho user"
+  });
+});
+
+app.post("/api/admin/card-topups/:id/reject", auth, (req, res) => {
+  if (!req.user || req.user.role !== "admin")
+    return res.status(403).json({error:"Admin only"});
+
+  if (!db.cardTopups) db.cardTopups = [];
+
+  const card = db.cardTopups.find(x => x.id === req.params.id);
+
+  if (!card)
+    return res.status(404).json({error:"Không tìm thấy đơn thẻ"});
+
+  if (card.status !== "pending")
+    return res.status(400).json({error:"Đơn này đã được xử lý"});
+
+  card.status = "rejected";
+  card.rejectedAt = new Date().toISOString();
+  card.rejectedBy = req.user.username;
+
+  save(db);
+
+  res.json({
+    ok:true,
+    message:"Đã từ chối đơn thẻ"
+  });
+});
+
+
 app.listen(PORT,"0.0.0.0",()=>console.log(`Damon Store V5 running on port ${PORT}`));
