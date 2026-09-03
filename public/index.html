@@ -61,6 +61,65 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.18;ba
 .cardTopup .card:hover{transform:translateY(-4px);box-shadow:0 12px 36px rgba(255,255,255,.08)}
 @keyframes cardGlow{0%,100%{box-shadow:0 0 0 rgba(255,255,255,0)}50%{box-shadow:0 0 34px rgba(180,200,255,.06)}}
 </style>
+
+<style id="card-topup-fix">
+.card-topup-fix {
+  margin-top: 24px;
+  padding: 22px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 20px;
+  background: rgba(12,12,12,.92);
+}
+.card-topup-fix h3 {
+  margin: 0 0 8px;
+  font-size: 22px;
+}
+.card-topup-fix .card-note {
+  color: #aaa;
+  margin-bottom: 18px;
+}
+.card-topup-fix label {
+  display: block;
+  margin: 12px 0 7px;
+  font-weight: 600;
+}
+.card-topup-fix input,
+.card-topup-fix select {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 50px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.16);
+  background: #080808;
+  color: #fff;
+  font-size: 16px;
+  outline: none;
+}
+.card-topup-fix input:focus,
+.card-topup-fix select:focus {
+  border-color: #aaa;
+}
+.card-topup-fix button {
+  width: 100%;
+  min-height: 52px;
+  margin-top: 18px;
+  border: 0;
+  border-radius: 13px;
+  background: #fff;
+  color: #000;
+  font-size: 17px;
+  font-weight: 700;
+}
+.card-topup-fix button:disabled {
+  opacity: .55;
+}
+#card-msg-fix {
+  margin-top: 14px;
+  line-height: 1.5;
+}
+</style>
+
 </head>
 <body>
 <nav class="nav"><div class="brand"><img src="/logo.png"><span>DAMON STORE</span></div><div class="navlinks" id="nav"></div></nav>
@@ -92,7 +151,6 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.18;ba
 <section id="cardTopup" class="card" style="margin-top:18px">
   <div class="row" style="justify-content:space-between;align-items:center">
     <div><span class="pill">💳 CARD TOPUP</span><h2 style="margin:10px 0 4px">Nạp bằng thẻ</h2>
-    <div class="muted">Tham khảo mức chiết khấu công khai trên DuyMod Game.</div></div>
   </div>
   <div class="grid" style="margin-top:14px">
     <div class="card"><b>Garena</b><div class="silver" style="font-size:26px;font-weight:900">18%</div><small class="muted">Chiết khấu</small></div>
@@ -173,4 +231,121 @@ document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='
 
   <div id="damon-card-msg" class="dim" style="margin-top:10px"></div>
 </div>
+
+<section class="card-topup-fix" id="card-topup-fix-box">
+  <h3>💳 Nạp tiền bằng thẻ cào</h3>
+  <div class="card-note">Nhập đúng thông tin thẻ. Admin sẽ kiểm tra và duyệt.</div>
+
+  <label>Nhà mạng</label>
+  <select id="card-telco-fix">
+    <option value="Viettel">Viettel</option>
+    <option value="Vinaphone">Vinaphone</option>
+    <option value="Garena">Garena</option>
+  </select>
+
+  <label>Mệnh giá</label>
+  <select id="card-amount-fix">
+    <option value="10000">10.000đ</option>
+    <option value="20000">20.000đ</option>
+    <option value="50000">50.000đ</option>
+    <option value="100000">100.000đ</option>
+    <option value="200000">200.000đ</option>
+    <option value="500000">500.000đ</option>
+  </select>
+
+  <label>Số seri</label>
+  <input id="card-serial-fix" type="text"
+         placeholder="Nhập số seri" autocomplete="off">
+
+  <label>Mã thẻ</label>
+  <input id="card-code-fix" type="password"
+         placeholder="Nhập mã thẻ" autocomplete="off">
+
+  <button id="card-send-fix" type="button">💳 Gửi thẻ</button>
+
+  <div id="card-msg-fix"></div>
+</section>
+
+
+<script id="card-topup-fix-js">
+(function(){
+  const btn = document.getElementById("card-send-fix");
+  const msg = document.getElementById("card-msg-fix");
+
+  if (!btn || !msg) return;
+
+  btn.onclick = async function(){
+    const telco = document.getElementById("card-telco-fix").value;
+    const amount = Number(document.getElementById("card-amount-fix").value);
+    const serial = document.getElementById("card-serial-fix").value.trim();
+    const code = document.getElementById("card-code-fix").value.trim();
+
+    if (!serial || !code) {
+      msg.textContent = "❌ Vui lòng nhập đầy đủ số seri và mã thẻ.";
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "⏳ Đang gửi...";
+
+    try {
+      const r = await fetch("/api/card-topup", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        credentials: "include",
+        body: JSON.stringify({
+          telco: telco,
+          amount: amount,
+          serial: serial,
+          code: code
+        })
+      });
+
+      const data = await r.json().catch(() => ({}));
+
+      if (!r.ok) {
+        throw new Error(data.error || "Không thể gửi thẻ");
+      }
+
+      document.getElementById("card-serial-fix").value = "";
+      document.getElementById("card-code-fix").value = "";
+
+      msg.innerHTML =
+        "✅ <b>Gửi thẻ thành công!</b><br>" +
+        "⏳ Vui lòng chờ Admin duyệt tối đa <b>5 phút</b>.<br>" +
+        "<span id='card-countdown-fix'>05:00</span>";
+
+      let remain = 300;
+      clearInterval(window.cardCountdownFix);
+
+      window.cardCountdownFix = setInterval(function(){
+        remain--;
+
+        const el = document.getElementById("card-countdown-fix");
+        if (!el) {
+          clearInterval(window.cardCountdownFix);
+          return;
+        }
+
+        const m = String(Math.floor(remain / 60)).padStart(2,"0");
+        const sec = String(remain % 60).padStart(2,"0");
+        el.textContent = m + ":" + sec;
+
+        if (remain <= 0) {
+          clearInterval(window.cardCountdownFix);
+          el.textContent =
+            "Đã hết 5 phút — nếu chưa được duyệt, hãy liên hệ Admin.";
+        }
+      }, 1000);
+
+    } catch (e) {
+      msg.textContent = "❌ " + e.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "💳 Gửi thẻ";
+    }
+  };
+})();
+</script>
+
 </body></html>
