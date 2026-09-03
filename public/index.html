@@ -141,4 +141,37 @@ document.getElementById('ap').addEventListener('keydown',e=>{if(e.key==='Enter')
 document.getElementById('au').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('ap').focus()});
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')hideAuth()});
 </script>
+
+<div id="damon-card-topup" class="card" style="margin-top:18px">
+  <h3>💳 Nạp tiền bằng thẻ cào</h3>
+  <div class="dim">Nhập thông tin thẻ, Admin sẽ kiểm tra và duyệt.</div>
+
+  <select id="damon-card-telco" style="width:100%;margin-top:12px;padding:12px">
+    <option value="">-- Chọn loại thẻ --</option>
+    <option value="Viettel">Viettel</option>
+    <option value="Vinaphone">Vinaphone</option>
+    <option value="Garena">Garena</option>
+  </select>
+
+  <input id="damon-card-amount" type="number" min="10000"
+    placeholder="Mệnh giá thẻ (VD: 50000)"
+    style="width:100%;margin-top:10px;padding:12px">
+
+  <input id="damon-card-serial" type="text"
+    placeholder="Số SERI"
+    autocomplete="off"
+    style="width:100%;margin-top:10px;padding:12px">
+
+  <input id="damon-card-code" type="password"
+    placeholder="Mã thẻ"
+    autocomplete="off"
+    style="width:100%;margin-top:10px;padding:12px">
+
+  <button id="damon-card-submit" class="btn-primary btn-block"
+    style="margin-top:12px">
+    💳 Gửi thẻ
+  </button>
+
+  <div id="damon-card-msg" class="dim" style="margin-top:10px"></div>
+</div>
 </body></html>
