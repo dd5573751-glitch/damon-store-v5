@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Damon Store</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,Arial;background:#050505;color:#f5f5f5}
+:root{--line:#252525;--muted:#9b9b9b;--silver:#d8d8d8;--panel:#0e0e0e}
+button,input,textarea{font:inherit}button{cursor:pointer}
+.nav{position:sticky;top:0;z-index:5;background:rgba(5,5,5,.9);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);padding:14px 5%;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:12px;font-weight:900;letter-spacing:1px}.brand img{width:42px;height:42px;border-radius:12px;object-fit:cover}
+.navlinks{display:flex;gap:8px;flex-wrap:wrap}.navlinks button,.btn{background:#111;border:1px solid #333;color:#fff;border-radius:10px;padding:10px 13px}
+.btn.primary{background:#eee;color:#050505;border-color:#eee}.btn.danger{border-color:#6b2525;color:#ff8c8c}
+.wrap{max-width:1180px;margin:auto;padding:28px 5% 70px}.hero{padding:42px 0 28px;display:grid;grid-template-columns:1.4fr .8fr;gap:25px;align-items:center}
+h1{font-size:clamp(38px,7vw,76px);line-height:.95;margin:0 0 16px}.silver{background:linear-gradient(90deg,#fff,#777,#fff);-webkit-background-clip:text;color:transparent}
+.muted{color:var(--muted)}.card{background:linear-gradient(145deg,#111,#080808);border:1px solid var(--line);border-radius:18px;padding:18px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.stat b{font-size:25px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.price{font-size:24px;font-weight:900;margin:15px 0}
+input,textarea{width:100%;background:#090909;border:1px solid #333;color:#fff;border-radius:10px;padding:11px;margin:6px 0 10px;outline:none}textarea{min-height:100px;resize:vertical}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.section{margin-top:30px}.hidden{display:none}.pill{display:inline-block;border:1px solid #333;border-radius:999px;padding:5px 9px;color:#bbb;font-size:12px}
+.modal{position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;padding:20px;z-index:20}.modal>div{width:min(430px,100%);background:#0d0d0d;border:1px solid #333;border-radius:18px;padding:20px}
+table{width:100%;border-collapse:collapse}td,th{border-bottom:1px solid #222;padding:10px;text-align:left;font-size:13px}.key{font-family:monospace;background:#151515;border:1px dashed #555;padding:8px;border-radius:9px;word-break:break-all}
+@media(max-width:800px){.hero{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.nav{align-items:flex-start;gap:10px;flex-direction:column}}
+
+/* V5 UI polish */
+body{overflow-x:hidden;background:radial-gradient(circle at 75% 8%,#171717 0,#050505 28%,#030303 70%)}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.18;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:34px 34px}
+.hero{position:relative;min-height:430px;overflow:hidden}
+.hero-copy{position:relative;z-index:2}
+.ninja-stage{position:absolute;right:0;top:5px;width:min(49%,470px);height:420px;pointer-events:none;filter:drop-shadow(0 0 20px rgba(150,180,255,.12))}
+.ninja{position:absolute;right:11%;bottom:18px;width:220px;height:330px;animation:ninjaFloat 3.8s ease-in-out infinite}
+.ninja .head{position:absolute;left:67px;top:18px;width:86px;height:92px;border-radius:48% 46% 44% 48%;background:linear-gradient(145deg,#171717,#050505);border:2px solid #777;box-shadow:0 0 25px #000}
+.ninja .hair{position:absolute;left:45px;top:-6px;width:125px;height:75px;background:#080808;clip-path:polygon(0 45%,18% 4%,34% 31%,46% 0,58% 29%,73% 3%,83% 34%,100% 13%,88% 63%,70% 45%,55% 67%,38% 48%,18% 74%);filter:drop-shadow(0 0 5px #111)}
+.ninja .band{position:absolute;left:59px;top:49px;width:103px;height:18px;background:linear-gradient(#cfcfcf,#666);transform:rotate(-4deg);border-radius:4px}
+.ninja .eye{position:absolute;left:78px;top:53px;width:16px;height:5px;background:#fff;border-radius:50%;box-shadow:45px 0 #fff,0 0 10px #9fc0ff,45px 0 10px #9fc0ff}
+.ninja .neck{position:absolute;left:94px;top:102px;width:35px;height:27px;background:#111;border:1px solid #555}
+.ninja .body{position:absolute;left:50px;top:117px;width:125px;height:145px;background:linear-gradient(150deg,#202020,#070707);clip-path:polygon(25% 0,75% 0,100% 28%,82% 100%,18% 100%,0 28%);border:1px solid #777}
+.ninja .scarf{position:absolute;left:48px;top:112px;width:145px;height:25px;background:#0a0a0a;border-top:2px solid #aaa;transform:rotate(8deg);opacity:.9}
+.ninja .arm{position:absolute;top:137px;width:36px;height:125px;background:linear-gradient(#151515,#050505);border:1px solid #666;border-radius:20px}
+.ninja .arm.a{left:25px;transform:rotate(18deg)}.ninja .arm.b{left:165px;transform:rotate(-22deg)}
+.ninja .leg{position:absolute;top:242px;width:48px;height:110px;background:#0a0a0a;border:1px solid #666;border-radius:22px}
+.ninja .leg.a{left:62px;transform:rotate(7deg)}.ninja .leg.b{left:125px;transform:rotate(-8deg)}
+.chakra{position:absolute;inset:18% 8%;border:1px solid rgba(190,210,255,.18);border-radius:50%;animation:pulseRing 2.8s ease-out infinite}
+.chakra:after{content:"";position:absolute;inset:18%;border:1px dashed rgba(255,255,255,.18);border-radius:50%;animation:spin 10s linear infinite}
+.lightning{position:absolute;right:35%;top:19%;width:4px;height:240px;background:linear-gradient(transparent,#d9e8ff,transparent);transform:rotate(22deg);filter:blur(.2px);animation:flash 1.7s infinite}
+.lightning:before,.lightning:after{content:"";position:absolute;left:-20px;width:55px;height:4px;background:#d9e8ff;transform:rotate(-55deg);box-shadow:0 0 14px #b8d2ff}
+.lightning:before{top:50px}.lightning:after{top:135px;transform:rotate(50deg)}
+@keyframes ninjaFloat{50%{transform:translateY(-12px) rotate(-1deg)}}
+@keyframes pulseRing{0%,100%{transform:scale(.92);opacity:.3}50%{transform:scale(1.04);opacity:.75}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes flash{0%,82%,100%{opacity:.12}86%{opacity:1}}
+@media(max-width:800px){.hero{min-height:560px}.ninja-stage{width:100%;height:330px;top:255px;right:-8%}.ninja{transform:scale(.82);transform-origin:bottom right}.hero-copy{padding-bottom:300px}}
+/* Reliable login/register modal interaction */
+.modal{touch-action:manipulation}
+.modal.hidden{display:none!important}
+.modal>div{animation:modalIn .22s ease-out}
+@keyframes modalIn{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+.modal button{min-height:44px}
+
+.cardTopup{animation:cardGlow 3.5s ease-in-out infinite}
+.cardTopup .card{transition:transform .2s ease,box-shadow .2s ease}
+.cardTopup .card:hover{transform:translateY(-4px);box-shadow:0 12px 36px rgba(255,255,255,.08)}
+@keyframes cardGlow{0%,100%{box-shadow:0 0 0 rgba(255,255,255,0)}50%{box-shadow:0 0 34px rgba(180,200,255,.06)}}
+</style>
+</head>
+<body>
+<nav class="nav"><div class="brand"><img src="/logo.png"><span>DAMON STORE</span></div><div class="navlinks" id="nav"></div></nav>
+<main class="wrap">
+<section class="hero">
+<div class="hero-copy">
+<span class="pill">BLACK • SILVER • NINJA MODE</span>
+<h1>DAMON<br><span class="silver">STORE</span></h1>
+<p class="muted">Kho sản phẩm & KEY tự quản lý. Không tự thêm sản phẩm.</p>
+<div class="row">
+<button type="button" class="btn primary" id="loginBtn">Đăng nhập</button>
+<button type="button" class="btn" id="registerBtn">Tạo tài khoản</button>
+</div>
+</div>
+<div class="ninja-stage" aria-hidden="true">
+<div class="chakra"></div><div class="lightning"></div>
+<div class="ninja"><div class="hair"></div><div class="head"></div><div class="band"></div><div class="eye"></div><div class="neck"></div><div class="scarf"></div><div class="body"></div><div class="arm a"></div><div class="arm b"></div><div class="leg a"></div><div class="leg b"></div></div>
+</div>
+<div class="card" style="position:absolute;right:0;bottom:5px;width:min(360px,46%);z-index:3">
+<div class="muted">Số dư</div><div id="balance" style="font-size:34px;font-weight:900">0đ</div><div class="muted" id="hello">Chưa đăng nhập</div>
+</div>
+</section>
+<section class="stats"><div class="card stat"><div class="muted">Sản phẩm</div><b id="statProducts">0</b></div><div class="card stat"><div class="muted">KEY còn</div><b id="statKeys">0</b></div><div class="card stat"><div class="muted">Xếp hạng tháng</div><b id="statRank">—</b></div></section>
+<section class="section"><h2>Sản phẩm</h2><div id="products" class="grid"></div></section>
+<section id="account" class="section hidden"><div class="card"><h2>Tài khoản</h2><div id="accountInfo"></div><div class="row"><button class="btn" onclick="deposit()">Nạp tiền</button><button class="btn" onclick="seller()">Đăng ký Seller</button><button class="btn" onclick="historyView()">Lịch sử</button><button class="btn" onclick="logout()">Đăng xuất</button></div></div><div id="history" class="section"></div></section>
+<section id="ranking" class="section"><div class="card"><h2>Top nạp tiền tháng này</h2><div id="rankings"></div></div></section>
+<section id="admin" class="section hidden"><div class="card"><h2>ADMIN PANEL</h2><div id="adminStats"></div><hr style="border-color:#222"><h3>Thêm sản phẩm</h3><input id="pname" placeholder="Tên sản phẩm"><input id="pprice" type="number" placeholder="Giá"><textarea id="pdesc" placeholder="Mô tả"></textarea><button class="btn primary" onclick="addProduct()">Thêm sản phẩm</button><div id="adminProducts" class="section"></div><div id="adminDeposits" class="section"></div><div id="adminUsers" class="section"></div></div></section>
+
+<section id="cardTopup" class="card" style="margin-top:18px">
+  <div class="row" style="justify-content:space-between;align-items:center">
+    <div><span class="pill">💳 CARD TOPUP</span><h2 style="margin:10px 0 4px">Nạp bằng thẻ</h2>
+    <div class="muted">Tham khảo mức chiết khấu công khai trên DuyMod Game.</div></div>
+  </div>
+  <div class="grid" style="margin-top:14px">
+    <div class="card"><b>Garena</b><div class="silver" style="font-size:26px;font-weight:900">18%</div><small class="muted">Chiết khấu</small></div>
+    <div class="card"><b>Vinaphone</b><div class="silver" style="font-size:26px;font-weight:900">25.8%</div><small class="muted">Chiết khấu</small></div>
+    <div class="card"><b>Viettel</b><div class="silver" style="font-size:26px;font-weight:900">27.6%</div><small class="muted">Chiết khấu</small></div>
+  </div>
+  <div class="notice" style="margin-top:14px">
+    Bảng mệnh giá đầy đủ của DuyMod Game yêu cầu đăng nhập, nên file này chỉ đưa các mức chiết khấu đang hiển thị công khai; không tự bịa mệnh giá.
+  </div>
+</section>
+
+</main>
+<div id="modal" class="modal hidden"><div><div class="row" style="justify-content:space-between"><h2 id="mtitle">Đăng nhập</h2><button class="btn" onclick="hideAuth()">×</button></div><input id="au" placeholder="Tên đăng nhập"><input id="ap" type="password" placeholder="Mật khẩu"><button class="btn primary" style="width:100%" onclick="submitAuth()">Tiếp tục</button><p class="muted" id="mmsg"></p></div></div>
+<script>
+const $=id=>document.getElementById(id), money=n=>Number(n||0).toLocaleString('vi-VN')+'đ';
+async function api(url,opt={}){const r=await fetch(url,{headers:{'Content-Type':'application/json',...(opt.headers||{})},...opt});let d={};try{d=await r.json()}catch{}if(!r.ok)throw Error(d.error||'Có lỗi');return d}
+let meData=null,authMode='login';
+function showAuth(m){authMode=m;$('mtitle').textContent=m==='login'?'Đăng nhập':'Tạo tài khoản';$('mmsg').textContent='';$('modal').classList.remove('hidden')}
+function hideAuth(){$('modal').classList.add('hidden')}
+async function submitAuth(){try{await api('/api/'+authMode,{method:'POST',body:JSON.stringify({username:$('au').value,password:$('ap').value})});hideAuth();await refresh()}catch(e){$('mmsg').textContent=e.message}}
+async function refresh(){await loadProducts();try{const d=await api('/api/me');meData=d.user}catch{meData=null}renderNav();renderAccount();loadRank();if(meData?.role==='admin')loadAdmin()}
+function renderNav(){let n=$('nav');if(!meData)n.innerHTML='<button onclick="showAuth(\'login\')">Đăng nhập</button><button onclick="showAuth(\'register\')">Đăng ký</button>';else n.innerHTML=`<button onclick="document.getElementById('account').scrollIntoView()">👤 ${esc(meData.username)}</button>${meData.role==='admin'?'<button onclick="document.getElementById(\'admin\').scrollIntoView()">⚙ Admin</button>':''}`}
+function renderAccount(){if(!meData){$('account').classList.add('hidden');$('hello').textContent='Chưa đăng nhập';$('balance').textContent='0đ';return}$('account').classList.remove('hidden');$('hello').textContent='@'+meData.username+(meData.sellerApproved?' • SELLER':'');$('balance').textContent=money(meData.balance);$('accountInfo').innerHTML=`<p>Tài khoản: <b>${esc(meData.username)}</b></p><p>Vai trò: <b>${esc(meData.role)}</b></p><p>Seller: <b>${meData.sellerApproved?'Đã duyệt':meData.sellerRequested?'Đang chờ duyệt':'Chưa duyệt'}</b></p>`}
+async function loadProducts(){const ps=await api('/api/products');$('products').innerHTML=ps.length?ps.map(p=>`<div class="card"><span class="pill">${p.keysAvailable} KEY còn</span><h3>${esc(p.name)}</h3><p class="muted">${esc(p.description||'')}</p><div class="price">${money(p.price)}</div><button class="btn primary" ${p.keysAvailable?'':'disabled'} onclick="buy('${p.id}')">${p.keysAvailable?'Mua ngay':'Hết KEY'}</button></div>`).join(''):'<div class="card"><p class="muted">Chưa có sản phẩm. Admin hãy thêm sản phẩm.</p></div>';let k=ps.reduce((s,p)=>s+p.keysAvailable,0);$('statProducts').textContent=ps.length;$('statKeys').textContent=k}
+async function buy(id){if(!meData)return showAuth('login');try{const d=await api('/api/buy/'+id,{method:'POST',body:'{}'});alert('Mua thành công!\\nKEY: '+d.purchase.key);await refresh();historyView()}catch(e){alert(e.message)}}
+async function deposit(){if(!meData)return;const amount=prompt('Nhập số tiền muốn nạp (tối thiểu 10.000đ):');if(!amount)return;try{const d=await api('/api/deposits',{method:'POST',body:JSON.stringify({amount:Number(amount)})});alert('Đã tạo yêu cầu nạp. Nội dung: '+d.deposit.content);historyView()}catch(e){alert(e.message)}}
+async function seller(){try{await api('/api/apply-seller',{method:'POST',body:'{}'});alert('Đã gửi yêu cầu Seller');await refresh()}catch(e){alert(e.message)}}
+async function historyView(){if(!meData)return;const [d,p]=await Promise.all([api('/api/history/deposits'),api('/api/history/purchases')]);$('history').innerHTML='<div class="card"><h3>Nạp tiền</h3><table><tr><th>Thời gian</th><th>Số tiền</th><th>Trạng thái</th></tr>'+d.map(x=>`<tr><td>${fmt(x.createdAt)}</td><td>${money(x.amount)}</td><td>${esc(x.status)}</td></tr>`).join('')+'</table><h3>Mua hàng</h3>'+p.map(x=>`<div class="card" style="margin:8px 0"><b>${esc(x.productName)}</b> • ${money(x.price)}<div class="key">${esc(x.key)}</div><small class="muted">${fmt(x.createdAt)}</small></div>`).join('')+'</div>'}
+async function loadRank(){const d=await api('/api/topup-ranking');$('rankings').innerHTML=d.rows.length?d.rows.map((x,i)=>`<p>#${i+1} <b>${esc(x.username)}</b> — ${money(x.amount)}</p>`).join(''):'<p class="muted">Chưa có dữ liệu tháng này.</p>';if(meData){const i=d.rows.findIndex(x=>x.username===meData.username);$('statRank').textContent=i>=0?'#'+(i+1):'—'}}
+async function logout(){await api('/api/logout',{method:'POST'});meData=null;await refresh()}
+async function loadAdmin(){try{const [s,ps,ds,us]=await Promise.all([api('/api/admin/stats'),api('/api/admin/products'),api('/api/admin/deposits'),api('/api/admin/users')]);$('admin').classList.remove('hidden');$('adminStats').innerHTML=`<p>Users: <b>${s.users}</b> • Orders: <b>${s.orders}</b> • Revenue: <b>${money(s.revenue)}</b> • KEY còn: <b>${s.keys}</b></p>`;$('adminProducts').innerHTML='<h3>Kho sản phẩm & KEY</h3>'+ps.map(p=>`<div class="card" style="margin:8px 0"><b>${esc(p.name)}</b> — ${money(p.price)}<p class="muted">${(p.keys||[]).filter(k=>!k.sold).length} KEY còn</p><textarea id="keys-${p.id}" placeholder="Mỗi KEY một dòng"></textarea><div class="row"><button class="btn primary" onclick="addKeys('${p.id}')">+ Thêm KEY</button><button class="btn danger" onclick="delProduct('${p.id}')">Xóa sản phẩm</button></div></div>`).join('');$('adminDeposits').innerHTML='<h3>Nạp tiền chờ duyệt</h3>'+ds.filter(x=>x.status==='pending').map(x=>`<div class="card" style="margin:8px 0">${esc(x.username)} — ${money(x.amount)} — ${esc(x.content)} <div class="row"><button class="btn primary" onclick="dep('${x.id}','approved')">Duyệt</button><button class="btn danger" onclick="dep('${x.id}','rejected')">Từ chối</button></div></div>`).join('')||'<p class="muted">Không có giao dịch chờ.</p>';$('adminUsers').innerHTML='<h3>User</h3>'+us.map(x=>`<div style="padding:8px 0;border-bottom:1px solid #222">${esc(x.username)} — ${esc(x.role)} — ${money(x.balance)} ${x.sellerRequested?'<span class="pill">Seller chờ duyệt</span>':''} ${x.role!=='admin'?(x.sellerRequested?`<button class="btn" onclick="approveSeller('${x.username}')">Duyệt Seller</button>`:'')+`<button class="btn" onclick="ban('${x.username}',${!x.banned})">${x.banned?'Mở ban':'Ban'}</button>`:''}</div>`).join('') }catch(e){console.error(e)}}
+async function addProduct(){try{await api('/api/admin/products',{method:'POST',body:JSON.stringify({name:$('pname').value,price:Number($('pprice').value),description:$('pdesc').value})});$('pname').value='';$('pprice').value='';$('pdesc').value='';await refresh()}catch(e){alert(e.message)}}
+async function addKeys(id){const a=$('keys-'+id).value.split('\\n').map(x=>x.trim()).filter(Boolean);try{await api('/api/admin/products/'+id+'/keys',{method:'POST',body:JSON.stringify({keys:a})});alert('Đã thêm KEY');await refresh()}catch(e){alert(e.message)}}
+async function delProduct(id){if(!confirm('Xóa sản phẩm?'))return;await api('/api/admin/products/'+id,{method:'DELETE'});await refresh()}
+async function dep(id,status){await api('/api/admin/deposits/'+id,{method:'POST',body:JSON.stringify({status})});await refresh()}
+async function approveSeller(u){await api('/api/admin/sellers/'+encodeURIComponent(u),{method:'POST',body:'{}'});await refresh()}
+async function ban(u,banned){await api('/api/admin/users/'+encodeURIComponent(u)+'/ban',{method:'POST',body:JSON.stringify({banned})});await refresh()}
+function fmt(s){return new Date(s).toLocaleString('vi-VN')}function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+refresh();
+</script>
+
+<script>
+document.getElementById('loginBtn').addEventListener('click',()=>showAuth('login'));
+document.getElementById('registerBtn').addEventListener('click',()=>showAuth('register'));
+document.getElementById('ap').addEventListener('keydown',e=>{if(e.key==='Enter')submitAuth()});
+document.getElementById('au').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('ap').focus()});
+document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')hideAuth()});
+</script>
+</body></html>
